@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+  <meta charset="UTF-8" />
+
+  <title>LUMINA OCR</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+  <style>
+
+    /* Resets default margins and paddings */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    /* Styles the page background */
+    body {
+      background: 
+      radial-gradient(circle at 50% 5%, rgba(255, 220, 140, 0.319), transparent 40%),
+      radial-gradient(circle at 50% 0%, rgb(255, 223, 62), transparent 0%),
+      linear-gradient(#000000, #060703);     
+      font-family: 'Inter', sans-serif;
+      color: #edeff5;
+      height: 100vh;
+      overflow: hidden;
+    }    
+
+    /* Main layout container */   
+    .app-grid {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 100vh;
+      width: 100%;
+      padding: 0.95rem 1.65rem 2.15rem;
+      gap: 1.85rem;
+
+      
+      --uiScale: clamp(0.85, min(calc(100vw / 1024px), calc(100vh / 576px)), 1);
+      transform: scale(var(--uiScale));
+      transform-origin: top center;
+    }
+
+    /* Header styling */
+    .neo-header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 2rem;
+      width: 100%;
+    }
+
+    /* Logo container */
+    .logo-area {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      border: 1px solid rgba(255, 215, 80, 0.2);
+      border-radius: 2rem;
+      padding: 0.7rem 1.8rem;
+      background: rgba(8, 12, 20, 0.65);
+      backdrop-filter: blur(20px);
+      box-shadow: 0 6px 14px rgba(0,0,0,0.3);
+    }
+
+    /* Glowing icon background */
+    .logo-glow {
+      background: linear-gradient(135deg, #F9F3B0, #FFE15D);
+      width: 38px;
+      height: 38px;
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 12px rgba(255, 225, 93, 0.5);
+    }
+
+    /* Icon inside logo */
+    .logo-glow i {
+      font-size: 1.5rem;
+      color: #0c0f1c;
+    }
+
+    /* Gradient text for logo */
+    .logo-text {
+      font-weight: 700;
+      font-size: 2.0rem;
+      letter-spacing: 0.5px;
+      background: linear-gradient(135deg, #FFFFFF, #FFE792);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    /* Secondary logo part */
+    .logo-text span {
+      font-weight: 400;
+      color: #b9c3e880;
+      background: none;
+      -webkit-background-clip: unset;
+      background-clip: unset;
+    }
+
+    /* Wrapper for language selector */
+    .lang-select-wrap {
+      position: relative;
+      width: 100%;
+    }
+
+    /* Custom arrow for select */
+    .lang-select-wrap::after {
+      content: '';
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-35%) rotate(45deg);
+      width: 6px;
+      height: 6px;
+      border-right: 2px solid #FFE15D;
+      border-bottom: 2px solid #FFE15D;
+      pointer-events: none;
+      opacity: 0.85;
+    }
+
+    /* Language dropdown styling */
+    .lang-select {
+      width: 100%;
+      height: 44px;
+      padding: 0 40px 0 16px;
+      border-radius: 60px;
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+      font-size: 0.85rem;
+      color: #eef3ff;
+      background: rgba(25, 30, 45, 0.7);
+      border: 1px solid rgba(255,215,80,0.2);
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    /* Hover effect for select */
+    .lang-select:hover {
+      background: rgba(45, 52, 80, 0.8);
+      border-color: #FFD966;
+    }
+
+    /* Focus effect */
+    .lang-select:focus {
+      outline: none;
+      border-color: #FFE15D;
+      box-shadow: 0 0 0 3px rgba(255, 225, 93, 0.15);
+    }
+
+    /* Option background */
+    .lang-select option {
+      background: #141a28;
+      color: #eef3ff;
+    }
+
+    /* Container for preprocessing */
+    .preproc-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: stretch;
+      width: 100%;
+    }
+
+    /* Chip-like checkbox style */
+    .preproc-chip {
+      position: relative;
+      cursor: pointer;
+      padding: 0 16px;
+      border-radius: 60px;
+      background: rgba(25, 30, 45, 0.7);
+      border: 1px solid rgba(255,215,80,0.2);
+      transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 12px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      width: 100%;
+      height: 44px;
+      line-height: 44px;
+      box-sizing: border-box;
+    }
+
+    /* Hidden original checkbox */
+    .preproc-chip input {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    /* Custom dot indicator */
+    .checkbox-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #7a7e94;
+      display: inline-block;
+      margin-right: 8px;
+      transition: all 0.2s ease;
+      border: 2px solid rgba(255,215,80,0.2);
+    }
+
+    /* Checked dot style */
+    .preproc-chip input:checked + .checkbox-dot {
+      background: #FFE15D;
+      box-shadow: 0 0 10px rgba(255, 225, 93, 0.7);
+      border-color: #FFE15D;
+    }
+
+    /* Hover effect for chip */
+    .preproc-chip:hover {
+      background: rgba(45, 52, 80, 0.8);
+      border-color: #FFD966;
+      transform: none;
+    }
+
+    /* Main workspace container */
+    .workspace-modern {
+      background: rgba(10, 14, 22, 0.4);
+      backdrop-filter: blur(8px);
+      border-radius: 1.8rem;
+      border: 1px solid rgba(255,255,210,0.05);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: all 0.2s;
+      width: 100%;
+      max-width: 980px;
+      flex: 1;
+    }
+
+    /* Shared toolbar control surface (buttons, select, chips) */
+    :root {
+      --toolbar-control-h: 36px;
+      --toolbar-control-radius: 999px;
+      --toolbar-control-bg: rgba(25, 30, 45, 0.7);
+      --toolbar-control-border: rgba(255, 215, 80, 0.2);
+      --toolbar-control-font: 0.72rem;
+    }
+
+    /* Toolbar area — single row, controls aligned */
+    .toolbar-flex {
+      padding: 0.7rem 1.05rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 10px;
+      border-bottom: 1px solid rgba(255,255,245,0.07);
+    }
+
+    /* One flex row for every control */
+    .toolbar-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+    }
+
+    /* General button style */
+    .action-btn {
+      box-sizing: border-box;
+      height: var(--toolbar-control-h);
+      padding: 0 14px;
+      background: var(--toolbar-control-bg);
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      font-size: var(--toolbar-control-font);
+      border-radius: var(--toolbar-control-radius);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: #eef3ff;
+      cursor: pointer;
+      transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+      backdrop-filter: blur(4px);
+      border: 1px solid var(--toolbar-control-border);
+      white-space: nowrap;
+    }
+
+    /* Icon inside button */
+    .action-btn i {
+      font-size: 0.82rem;
+    }
+
+    /* Primary button (highlight) */
+    .action-btn.primary {
+      background: #FFE15D;
+      color: #0c0f1c;
+      border: 1px solid rgba(255, 209, 77, 0.55);
+      box-shadow: 0 4px 12px rgba(255, 225, 93, 0.3);
+    }
+
+    /* Hover for primary button */
+    .action-btn.primary:hover {
+      background: #ffd84a;
+      border-color: #FFE15D;
+      box-shadow: 0 4px 14px rgba(255, 225, 93, 0.4);
+      color: #0c0f1c;
+    }
+
+    /* Hover for regular buttons */
+    .action-btn:not(.primary):hover {
+      background: rgba(45, 52, 80, 0.85);
+      border-color: #FFD966;
+    }
+
+    /* Compact language selector wrapper */
+    .lang-select-wrap.compact::after {
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%) rotate(45deg);
+    }
+
+    /* Compact wrapper sizing — narrow bar; full labels only in dropdown / title tooltip */
+    .lang-select-wrap.compact {
+      width: 100%;
+      max-width: 118px;
+      min-width: 0;
+      flex: 0 0 auto;
+    }
+
+    /* Compact select style */
+    .lang-select.compact {
+      box-sizing: border-box;
+      height: var(--toolbar-control-h);
+      padding: 0 28px 0 10px;
+      border-radius: var(--toolbar-control-radius);
+      font-size: var(--toolbar-control-font);
+      font-weight: 600;
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+      background: var(--toolbar-control-bg);
+      border: 1px solid var(--toolbar-control-border);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .lang-select.compact:hover,
+    .lang-select.compact:focus {
+      background: rgba(45, 52, 80, 0.85);
+    }
+
+    /* Horizontal preproc chips in toolbar */
+    .preproc-grid.topbar {
+      flex-direction: row;
+      align-items: center;
+      gap: 10px;
+      width: auto;
+      flex: 0 0 auto;
+    }
+
+    /* Compact chip style */
+    .preproc-chip.compact {
+      box-sizing: border-box;
+      height: var(--toolbar-control-h);
+      line-height: var(--toolbar-control-h);
+      padding: 0 14px;
+      width: auto;
+      font-size: var(--toolbar-control-font);
+      gap: 8px;
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      color: #eef3ff;
+      background: var(--toolbar-control-bg);
+      border: 1px solid var(--toolbar-control-border);
+      border-radius: var(--toolbar-control-radius);
+    }
+
+    /* Small dot inside compact chip */
+    .preproc-chip.compact .checkbox-dot {
+      width: 10px;
+      height: 10px;
+      margin-right: 0;
+      flex-shrink: 0;
+      border-width: 2px;
+    }
+
+    .preproc-chip.compact:hover {
+      background: rgba(45, 52, 80, 0.85);
+      border-color: #FFD966;
+    }
+
+    /* Container for image and text panels */
+    .dual-panels {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      gap: 0;
+    }
+
+    /* Each panel styling */
+    .image-panel, .text-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: all 0.3s;
+    }
+
+    /* Separator between panels */
+    .image-panel {
+      border-right: 1px solid rgba(255,255,200,0.08);
+    }
+
+    /* Panel header */
+    .panel-head {
+      padding: 0.5rem 1rem;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      background: rgba(0,0,0,0.2);
+      display: flex;
+      justify-content: space-between;
+      color: #cbd5ff;
+      border-bottom: 1px solid rgba(255,215,80,0.1);
+    }
+
+    /* Container for image preview */
+    .preview-container {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: auto;
+      background: radial-gradient(circle at 30% 20%, rgba(0,0,0,0.3), #020408);
+    }
+
+    /* Image element */
+    #preview {
+      max-width: 95%;
+      max-height: 95%;
+      object-fit: contain;
+      border-radius: 18px;
+      box-shadow: 0 10px 28px -8px black;
+      transition: all 0.3s ease;
+      display: none;
+      opacity: 0;
+      animation: fadeZoom 0.4s forwards;
+    }
+
+    /* Fade-in animation for image */
+    @keyframes fadeZoom {
+      0% { opacity: 0; transform: scale(0.96);}
+      100% { opacity: 1; transform: scale(1);}
+    }
+
+    /* Drop zone overlay */
+    .drop-zone {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      text-align: center;
+      transition: all 0.25s;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    /* Hidden drop zone */
+    .drop-zone.hidden {
+      opacity: 0;
+      visibility: hidden;
+    }
+
+    /* Icon inside drop zone */
+    .drop-zone-icon {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: rgba(255, 225, 93, 0.07);
+      border: 1px solid rgba(255, 225, 93, 0.18);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 28px rgba(255, 225, 93, 0.08);
+      transform: translate(-10px,-30px);
+      
+    }
+
+    /* Icon inside drop zone */
+    .drop-zone-icon i {
+      font-size: 1.9rem;
+      color: rgba(255, 225, 93, 0.55);
+    }
+
+    /* Text container in drop zone */
+    .drop-zone-text {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: center;
+      transform: translate(-10px,-30px);
+    }
+
+    /* Title text */
+    .drop-zone-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #c8d0f0;
+      letter-spacing: 0.2px;
+    }
+
+    /* Subtitle / hint */
+    .drop-zone-sub {
+      font-size: 0.82rem;
+      color: #6a74a0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Keyboard hint styling */
+    .drop-kbd {
+      background: rgba(255, 225, 93, 0.1);
+      border: 1px solid rgba(255, 225, 93, 0.25);
+      border-radius: 6px;
+      padding: 2px 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      color: #FFE792;
+      letter-spacing: 0.5px;
+    }
+
+    /* Text output area */
+    #output-text {
+      flex: 1;
+      background: rgba(10, 14, 24, 0.5);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      line-height: 1.55;
+      padding: 1.2rem;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #eef2ff;
+      outline: none;
+      border: none;
+    }
+
+    /* Status bar at bottom */
+    .status-glow {
+      padding: 0.55rem 1.25rem;
+      background: rgba(0,0,0,0.35);
+      border-top: 1px solid rgba(255,215,80,0.12);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.72rem;
+      flex-wrap: nowrap;
+      min-height: 44px; 
+    }
+
+    /* Status indicator area */
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      min-width: 0; 
+    }
+
+    /* Status text */
+    #status-text {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: block;
+    }
+
+    /* Small dot for status */
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      background: #9BDEAC;
+      border-radius: 50%;
+      transition: 0.2s;
+    }
+
+    /* Animated dot */
+    .pulse-dot.active-pulse {
+      background: #FFE15D;
+      box-shadow: 0 0 8px #FFE15D;
+      animation: pulse 1s infinite;
+    }
+
+    /* Pulse animation */
+    @keyframes pulse {
+      0% { opacity: 0.5; transform: scale(0.9);}
+      100% { opacity: 1; transform: scale(1.2);}
+    }
+
+    /* Progress ring container */
+    .progress-ring {
+      width: 28px;
+      height: 28px;
+      position: relative;
+    }
+
+    /* SVG progress circle */
+    .circular-progress {
+      transform: rotate(-90deg);
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Filled circle style */
+    .circular-progress circle {
+      fill: none;
+      stroke: #FFE15D;
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-dasharray: 75.4;
+      stroke-dashoffset: 75.4;
+      transition: stroke-dashoffset 0.2s linear;
+    }
+
+    /* Progress tracker wrapper */
+    .progress-tracker {
+      display: flex; 
+      align-items: center;
+      gap: 10px;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.18s ease;
+    }
+
+    /* Visible progress tracker */
+    .progress-tracker.visible {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    /* Toast notification */
+    .toast-modern {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #1f253dcc;
+      backdrop-filter: blur(20px);
+      padding: 0.7rem 1.5rem;
+      border-radius: 80px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      border: 1px solid rgba(255,215,80,0.4);
+      color: #FFEAA0;
+      z-index: 9999;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      opacity: 0;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    /* Show toast */
+    .toast-modern.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0px);
+    }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #FFE15D55;
+      border-radius: 10px;
+    }
+
+  </style>
+</head>
+<body>
+
+<div class="app-grid">
+  <!-- Header section with logo -->
+  <div class="neo-header">
+    <div class="logo-area">
+      <div class="logo-glow"><i class="fas fa-eye"></i></div>
+      <div class="logo-text">LUMINA <span>OCR</span></div>
+    </div>
+  </div>
+
+  <!-- Main workspace card -->
+  <div class="workspace-modern">
+    <!-- Toolbar with action buttons -->
+    <div class="toolbar-flex">
+      <div class="toolbar-controls" role="toolbar" aria-label="OCR actions and options">
+        <button type="button" class="action-btn primary" id="btn-run"><i class="fas fa-scroll"></i> Process OCR</button>
+        <button type="button" class="action-btn" id="btn-copy"><i class="fas fa-copy"></i> Copy</button>
+        <button type="button" class="action-btn" id="btn-clear"><i class="fas fa-trash-alt"></i> Clear</button>
+        <button type="button" class="action-btn" id="btn-fix"><i class="fas fa-magic"></i> Fix Formatting</button>
+        <div class="lang-select-wrap compact">
+          <select class="lang-select compact" id="lang-select" name="lang" aria-label="OCR language">
+            <option value="eng">English</option>
+            <option value="por">Portuguese</option>
+            <option value="pol">Polish</option>
+            <option value="eng+por">English + Portuguese</option>
+            <option value="eng+pol">English + Polish</option>
+          </select>
+        </div>
+        <div class="preproc-grid topbar" id="preproc-group">
+          <label class="preproc-chip compact">
+            <input type="checkbox" name="preproc" value="greyscale" checked>
+            <span class="checkbox-dot"></span> Greyscale
+          </label>
+          <label class="preproc-chip compact">
+            <input type="checkbox" name="preproc" value="upscale" checked>
+            <span class="checkbox-dot"></span> Upscale
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Two-column area: image and text -->
+    <div class="dual-panels">
+      <!-- Left panel: image preview -->
+      <div class="image-panel">
+        <div class="panel-head"><span><i class="fas fa-image"></i> SOURCE</span> <span id="img-info">—</span></div>
+        <div class="preview-container" id="canvas-wrap">
+          <div class="drop-zone" id="drop-zone">
+            <div class="drop-zone-icon"><i class="fas fa-camera"></i></div>
+            <div class="drop-zone-text">
+              <span class="drop-zone-title">Take a screenshot</span>
+              <span class="drop-zone-sub">then paste with <kbd class="drop-kbd">Ctrl+V</kbd></span>
+            </div>
+          </div>
+          <img id="preview" alt="preview">
+        </div>
+      </div>
+      <!-- Right panel: extracted text -->
+      <div class="text-panel">
+        <div class="panel-head"><span><i class="fas fa-file-alt"></i> EXTRACTED DATA</span> <span id="char-count">0 characters</span></div>
+        <div id="output-text" contenteditable="false"></div>
+      </div>
+    </div>
+
+    <!-- Status bar with progress ring -->
+    <div class="status-glow">
+      <div class="status-indicator">
+        <div class="pulse-dot" id="status-dot"></div>
+        <span id="status-text">Ready. Paste an image (Ctrl+V) to start.</span>
+      </div>
+      <div class="progress-tracker" id="progress-track">
+        <div class="progress-ring">
+          <svg class="circular-progress" viewBox="0 0 32 32">
+            <circle cx="16" cy="16" r="12" stroke="rgba(255,255,200,0.2)" stroke-width="2" fill="none"/>
+            <circle cx="16" cy="16" r="12" id="progress-ring-circle" stroke="url(#grad)" stroke-width="3" fill="none" stroke-linecap="round" stroke-dasharray="75.4" stroke-dashoffset="75.4"/>
+            <defs><linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#FFE15D"/><stop offset="100%" stop-color="#FFB347"/></linearGradient></defs>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast notification element -->
+<div class="toast-modern" id="toast"></div>
+
+<script>
+(() => {
+  'use strict';
+  // Stores current image file and its URL
+  let currentImageFile = null;
+  let currentImageUrl = null;
+  // Prevents multiple OCR runs at once
+  let isRunning = false;
+
+  // DOM element references
+  const preview = document.getElementById('preview');
+  const dropZone = document.getElementById('drop-zone');
+  const imgInfo = document.getElementById('img-info');
+  const charCountSpan = document.getElementById('char-count');
+  const outputText = document.getElementById('output-text');
+  const progressTrackDiv = document.getElementById('progress-track');
+  const statusTextSpan = document.getElementById('status-text');
+  const btnRun = document.getElementById('btn-run');
+  const btnCopy = document.getElementById('btn-copy');
+  const btnClear = document.getElementById('btn-clear');
+  const toastEl = document.getElementById('toast');
+  const statusDot = document.getElementById('status-dot');
+  const progressRingCircle = document.getElementById('progress-ring-circle');
+  const btnFix = document.getElementById('btn-fix');
+  const preprocGroup = document.getElementById('preproc-group');
+  const langSelect = document.getElementById('lang-select');
+
+  function syncLangSelectTitle() {
+    const opt = langSelect.options[langSelect.selectedIndex];
+    langSelect.title = opt ? opt.textContent.trim() : '';
+  }
+  syncLangSelectTitle();
+  langSelect.addEventListener('change', syncLangSelectTitle);
+
+  // Checks if a preprocessing option is enabled
+  function isPreprocEnabled(value) {
+    const el = preprocGroup.querySelector(`input[name="preproc"][value="${value}"]`);
+    return el && el.checked;
+  }
+
+  // Converts image data to grayscale
+  function convertToGrayscale(imageData) {
+    const d = imageData.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const g = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+      d[i] = d[i + 1] = d[i + 2] = g;
+    }
+    return imageData;
+  }
+
+  // Doubles image size for better OCR accuracy
+  function applyUpscale(imageData, w, h) {
+    const nw = w * 2;
+    const nh = h * 2;
+    const src = document.createElement('canvas');
+    src.width = w;
+    src.height = h;
+    src.getContext('2d').putImageData(imageData, 0, 0);
+    const dst = document.createElement('canvas');
+    dst.width = nw;
+    dst.height = nh;
+    const dCtx = dst.getContext('2d');
+    dCtx.imageSmoothingEnabled = true;
+    dCtx.imageSmoothingQuality = 'high';
+    dCtx.drawImage(src, 0, 0, nw, nh);
+    return { data: dCtx.getImageData(0, 0, nw, nh), w: nw, h: nh };
+  }
+
+  // Applies selected preprocessing and returns a PNG blob
+  async function buildPreprocessedImageBlob() {
+    const img = await new Promise((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = () => reject(new Error('Could not decode image'));
+      i.src = currentImageUrl;
+    });
+    let w = img.naturalWidth;
+    let h = img.naturalHeight;
+    const c = document.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    const cctx = c.getContext('2d');
+    cctx.drawImage(img, 0, 0);
+    const snap = cctx.getImageData(0, 0, w, h);
+    let copy = new ImageData(new Uint8ClampedArray(snap.data), w, h);
+
+    const doGray = isPreprocEnabled('greyscale');
+    const doUpscale = isPreprocEnabled('upscale');
+
+    if (doGray) copy = convertToGrayscale(copy);
+    if (doUpscale) {
+      const result = applyUpscale(copy, w, h);
+      copy = result.data;
+      w = result.w;
+      h = result.h;
+    }
+
+    c.width = w;
+    c.height = h;
+    cctx.putImageData(copy, 0, 0);
+    return new Promise((resolve, reject) => {
+      c.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('toBlob failed'))), 'image/png');
+    });
+  }
+
+  // Gets selected OCR language
+  function getSelectedLang() {
+    return langSelect.value;
+  }
+
+  // Status appearance mapping
+  const STATE_MAP = {
+    idle:  { dotColor: '#9BDEAC', pulse: false },
+    run:   { dotColor: '#FFE15D', pulse: true  },
+    done:  { dotColor: '#9BDEAC', pulse: false },
+    error: { dotColor: '#FF8A7A', pulse: false }
+  };
+
+  // Updates status text and dot animation
+  function setStatus(state, msg) {
+    statusTextSpan.textContent = msg;
+    const cfg = STATE_MAP[state] || STATE_MAP.idle;
+    statusDot.style.background = cfg.dotColor;
+    if (cfg.pulse) statusDot.classList.add('active-pulse');
+    else statusDot.classList.remove('active-pulse');
+  }
+
+  // Updates circular progress ring
+  function setProgress(pct) {
+    if (!progressRingCircle) return;
+    const circumference = 75.4;
+    const offset = circumference - (pct / 100) * circumference;
+    progressRingCircle.style.strokeDashoffset = offset;
+  }
+
+  // Shows temporary message at bottom
+  function showToast(msg, duration = 2600) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    if (window.toastTimer) clearTimeout(window.toastTimer);
+    window.toastTimer = setTimeout(() => toastEl.classList.remove('show'), duration);
+  }
+
+  // Updates character count in extracted text
+  function updateCharCount() {
+    const text = outputText.textContent || outputText.innerText;
+    const n = text.length;
+    charCountSpan.textContent = `${n.toLocaleString()} character${n !== 1 ? 's' : ''}`;
+  }
+
+  // Loads selected image into preview
+  function loadImage(file) {
+    if (!file || !file.type.startsWith('image/')) {
+      showToast('Invalid image file', 1500);
+      return;
+    }
+    if (currentImageUrl) URL.revokeObjectURL(currentImageUrl);
+    currentImageFile = file;
+    currentImageUrl = URL.createObjectURL(file);
+    preview.src = currentImageUrl;
+    preview.style.display = 'block';
+    dropZone.classList.add('hidden');
+    const tempImg = new Image();
+    tempImg.onload = () => { imgInfo.textContent = `${tempImg.width} × ${tempImg.height} px`; };
+    tempImg.src = currentImageUrl;
+    btnRun.disabled = false;
+    setStatus('idle', `Image ready: ${file.name}. Press "Extract text"`);
+  }
+
+  // Clears extracted text and resets output
+  function clearOutput() {
+    outputText.innerHTML = '';
+    outputText.contentEditable = 'false';
+    updateCharCount();
+    if (currentImageFile) {
+      setStatus('idle', 'Ready to run.');
+    } else {
+      setStatus('idle', 'Ready. Paste an image (Ctrl+V)');
+    }
+  }
+
+  // Copies extracted text to clipboard
+  async function copyText() {
+    const text = outputText.textContent || outputText.innerText;
+    if (!text.trim()) { showToast('⚠ No text to copy.'); return; }
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast('✓ Copied to clipboard!');
+    } catch {
+      showToast('✗ Copy failed. Please select and copy manually.');
+    }
+  }
+
+  // Improves text formatting (fixes line breaks, hyphens)
+  function fixFormatting() {
+    const raw = outputText.textContent || outputText.innerText;
+    if (!raw.trim()) { showToast('⚠ No text to fix.'); return; }
+    const lines = raw.split('\n');
+    const HARD_END = /[.?!:;…\u2026"'\u201d\u2019)\]>]$/;
+    const HYPHEN_END = /-$/;
+    const SHORT_LINE = 18;
+    const STARTS_UPPERCASE_WORD = /^[A-ZÁÉÍÓÚÀÃÕÂÊÎÔÛÇÑ][a-záéíóúàãõâêîôûçñ]/;
+    const merged = [];
+    let buffer = '';
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trimEnd();
+      if (line.trim() === '') {
+        if (buffer) { merged.push(buffer); buffer = ''; }
+        merged.push('');
+        continue;
+      }
+      if (buffer === '') {
+        buffer = line;
+        continue;
+      }
+      const nextLine = line.trimStart();
+      const bufferTrimmed = buffer.trimEnd();
+      if (HYPHEN_END.test(bufferTrimmed)) {
+        buffer = bufferTrimmed.slice(0, -1) + nextLine;
+        continue;
+      }
+      if (HARD_END.test(bufferTrimmed)) {
+        merged.push(buffer);
+        buffer = line;
+        continue;
+      }
+      if (STARTS_UPPERCASE_WORD.test(nextLine) && bufferTrimmed.length > SHORT_LINE) {
+        const bufferWordCount = bufferTrimmed.split(/\s+/).length;
+        if (bufferWordCount >= 6) {
+          merged.push(buffer);
+          buffer = line;
+        } else {
+          buffer = bufferTrimmed + ' ' + nextLine;
+        }
+        continue;
+      }
+      buffer = bufferTrimmed + ' ' + nextLine;
+    }
+    if (buffer) merged.push(buffer);
+    const cleaned = [];
+    let lastWasBlank = false;
+    for (const l of merged) {
+      if (l === '') {
+        if (!lastWasBlank) cleaned.push('');
+        lastWasBlank = true;
+      } else {
+        cleaned.push(l);
+        lastWasBlank = false;
+      }
+    }
+    const result = cleaned.join('\n').trim();
+    outputText.textContent = result;
+    updateCharCount();
+    showToast('✓ Formatting fixed!');
+  }
+
+  // Main OCR process: runs Tesseract on current image
+  async function runOCR() {
+    if (isRunning) return;
+    if (!currentImageFile) { showToast('📋 Paste an image first (Ctrl+V)', 2200); return; }
+    isRunning = true;
+    btnRun.disabled = true;
+    outputText.innerHTML = '';
+    updateCharCount();
+    const lang = getSelectedLang();
+    setStatus('run', `Initializing OCR — ${lang} …`);
+    progressTrackDiv.classList.add('visible');
+    setProgress(0);
+    try {
+      const worker = await Tesseract.createWorker(lang, 1, {
+        logger: (m) => {
+          if (m.status === 'recognizing text') {
+            const pct = Math.round(m.progress * 100);
+            setProgress(pct);
+            setStatus('run', `OCR analyzing… ${pct}%`);
+          } else if (m.status.includes('load')) {
+            setProgress(15);
+            setStatus('run', 'Loading language model…');
+          } else if (m.status.includes('initializ')) {
+            setProgress(5);
+          }
+        }
+      });
+      setStatus('run', 'Processing image…');
+      const ocrBlob = await buildPreprocessedImageBlob();
+      const { data: { text } } = await worker.recognize(ocrBlob);
+      await worker.terminate();
+      const trimmed = text.trim();
+      outputText.textContent = trimmed || '(no text detected)';
+      outputText.contentEditable = trimmed ? 'true' : 'false';
+      setProgress(100);
+      if (trimmed) {
+        updateCharCount();
+        setStatus('done', `✓ Done. `);
+      } else {
+        setStatus('done', 'No text found in image.');
+      }
+    } catch (err) {
+      console.error(err);
+      outputText.textContent = '⚠ OCR error. Please retry with another image.';
+      setStatus('error', `Error: ${err.message}`);
+      showToast(`✗ OCR failed: ${err.message}`, 4000);
+    } finally {
+      isRunning = false;
+      btnRun.disabled = false;
+      setTimeout(() => {
+        progressTrackDiv.classList.remove('visible');
+        setProgress(0);
+      }, 1200);
+    }
+  }
+
+  // Handles paste event for quick image input
+  document.addEventListener('paste', e => {
+    const items = e.clipboardData?.items;
+    if (items) {
+      for (let item of items) {
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (file) {
+            loadImage(file);
+          }
+          return;
+        }
+      }
+    }
+  });
+
+  // Attach event listeners to buttons
+  btnRun.addEventListener('click', runOCR);
+  btnCopy.addEventListener('click', copyText);
+  btnFix.addEventListener('click', fixFormatting);
+  btnClear.addEventListener('click', clearOutput);
+  setStatus('idle', 'Ready. Paste an image (Ctrl+V)');
+})();
+</script>
+</body>
+</html>
